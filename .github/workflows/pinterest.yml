@@ -14,18 +14,18 @@ jobs:
     
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           
       - name: Install Dependencies
         run: |
-          pip install google-generativeai requests Pillow
+          pip install google-genai requests Pillow
           
       - name: Send Reminder Notification (9:45 PM BST)
         if: github.event.schedule == '45 15 * * 5'
