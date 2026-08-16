@@ -1,13 +1,15 @@
-name: Daily Pinterest Automation
+name: Pinterest Friday Automation
 
 on:
   schedule:
-    # Runs every day at 8:00 AM UTC
-    - cron: '0 8 * * *'
-  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+    # 1. Send Notification at 9:45 PM Bangladesh Time (3:45 PM UTC) on Fridays
+    - cron: '45 15 * * 5'
+    # 2. Run Main Script at 10:00 PM Bangladesh Time (4:00 PM UTC) on Fridays
+    - cron: '0 16 * * 5'
+  workflow_dispatch: # Allows manual testing
 
 jobs:
-  automate-pins:
+  notify-and-run:
     runs-on: ubuntu-latest
     
     steps:
@@ -25,18 +27,24 @@ jobs:
         run: |
           pip install google-generativeai requests Pillow
           
-      - name: Run Automation Script
+      - name: Send Reminder Notification (9:45 PM BST)
+        if: github.event.schedule == '45 15 * * 5'
+        run: |
+          curl -d "🚨 TIME TO UPDATE TRENDS! 🚨\nPaste your new Pinterest trends into trends.json now! The bot runs in 15 minutes." ntfy.sh/touhidul_pinterest_bot
+          
+      - name: Run Automation Script (10:00 PM BST)
+        if: github.event.schedule == '0 16 * * 5' || github.event_name == 'workflow_dispatch'
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
           IMG_BB_KEY: ${{ secrets.IMG_BB_KEY }}
           PINTEREST_TOKEN: ${{ secrets.PINTEREST_TOKEN }}
-          BOARD_ID: ${{ secrets.BOARD_ID }}
         run: python main.py
         
       - name: Commit Database Changes
+        if: github.event.schedule == '0 16 * * 5' || github.event_name == 'workflow_dispatch'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add trends.json
-          git commit -m "Update trend status for today" || echo "No changes to commit"
+          git commit -m "Auto-update trend status for the week" || echo "No changes to commit"
           git push
