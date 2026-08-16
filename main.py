@@ -4,7 +4,7 @@ import requests
 import base64
 import io
 import textwrap
-import google.generativeai as genai
+from google import genai
 from PIL import Image, ImageDraw, ImageFont
 
 # --- 1. CONFIGURATION ---
@@ -13,7 +13,8 @@ IMG_BB_KEY = os.getenv("IMG_BB_KEY")
 PINTEREST_TOKEN = os.getenv("PINTEREST_TOKEN")
 DESTINATION_LINK = "https://t.co/P9xneAMW1k"
 
-genai.configure(api_key=GEMINI_API_KEY)
+# Configure the NEW Google GenAI Client
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # --- 2. HELPER FUNCTIONS ---
 
@@ -33,8 +34,11 @@ def generate_pins_with_ai(keyword):
     Each object must have: "title" (max 60 chars), "description" (max 300 chars), "image_text" (max 4 words).
     """
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
+        # Using the NEW google-genai library syntax
+        response = client.models.generate_content(
+            model="gemini-1.5-flash", 
+            contents=prompt
+        )
         text = response.text.strip().replace("```json", "").replace("```", "")
         return json.loads(text)
     except Exception as e:
@@ -70,7 +74,6 @@ def get_or_create_board(board_name):
 
 def create_pin_image(image_text, keyword):
     """Creates a 1000x1500 Pinterest image with SEO text"""
-    # Aesthetic gradient-like background using solid colors
     img = Image.new('RGB', (1000, 1500), color=(250, 245, 235)) 
     draw = ImageDraw.Draw(img)
     
@@ -144,7 +147,7 @@ def main():
         print("trends.json not found!")
         return
 
-    # Find ALL pending trends (Since we run this once a week on Friday)
+    # Find ALL pending trends
     pending_trends = [t for t in trends if t.get('status') == 'pending']
     
     if not pending_trends:
@@ -183,11 +186,11 @@ def main():
                 print(f"✅ Posted: {idea.get('title')}")
                 success_count += 1
 
-        # If successful, mark as done so it doesn't run again next week
+        # If successful, mark as done
         if success_count > 0:
             target_trend['status'] = 'done'
 
-    # Save database with updated statuses
+    # Save database
     with open('trends.json', 'w') as f:
         json.dump(trends, f, indent=4)
     print("\nDatabase updated. See you next Friday!")
