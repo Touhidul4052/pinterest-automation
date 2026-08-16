@@ -1,0 +1,42 @@
+name: Daily Pinterest Automation
+
+on:
+  schedule:
+    # Runs every day at 8:00 AM UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+
+jobs:
+  automate-pins:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install Dependencies
+        run: |
+          pip install google-generativeai requests Pillow
+          
+      - name: Run Automation Script
+        env:
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          IMG_BB_KEY: ${{ secrets.IMG_BB_KEY }}
+          PINTEREST_TOKEN: ${{ secrets.PINTEREST_TOKEN }}
+          BOARD_ID: ${{ secrets.BOARD_ID }}
+        run: python main.py
+        
+      - name: Commit Database Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add trends.json
+          git commit -m "Update trend status for today" || echo "No changes to commit"
+          git push
